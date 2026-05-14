@@ -1,0 +1,63 @@
+name: Update Instagram Feed
+
+# ── Triggers ──────────────────────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: '0 10 * * *'   # Daily at 10:00 UTC (6am Eastern / 3am Pacific)
+  workflow_dispatch:        # Allow manual run from GitHub Actions UI
+
+# ── Permissions ───────────────────────────────────────────────────────────────
+permissions:
+  contents: write    # Push updated posts.json and images back to repo
+  secrets: write     # Update INSTAGRAM_ACCESS_TOKEN after refresh
+
+# ── Job ───────────────────────────────────────────────────────────────────────
+jobs:
+  update-feed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # 1. Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # 2. Python
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      # 3. Dependencies
+      - name: Install dependencies
+        run: pip install requests
+
+      # 4. Run the fetcher (token refresh writes NEW_ACCESS_TOKEN to GITHUB_ENV)
+      - name: Fetch Instagram posts
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+        run: python scripts/fetch_posts.py
+
+      # 5. Update the secret if the token was refreshed
+      - name: Update access token secret
+        if: env.NEW_ACCESS_TOKEN != ''
+        run: gh secret set INSTAGRAM_ACCESS_TOKEN --body "${{ env.NEW_ACCESS_TOKEN }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 6. Commit any changes (new images, updated posts.json)
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/posts.json docs/images/
+          # Only commit if there are actual changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: update Instagram feed [skip ci]"
+            git push
+          fi
