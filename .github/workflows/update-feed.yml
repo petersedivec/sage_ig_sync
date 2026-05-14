@@ -9,7 +9,6 @@ on:
 # ── Permissions ───────────────────────────────────────────────────────────────
 permissions:
   contents: write    # Push updated posts.json and images back to repo
-  secrets: write     # Update INSTAGRAM_ACCESS_TOKEN after refresh
 
 # ── Job ───────────────────────────────────────────────────────────────────────
 jobs:
