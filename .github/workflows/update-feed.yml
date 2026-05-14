@@ -40,13 +40,6 @@ jobs:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
         run: python scripts/fetch_posts.py
 
-      # 5. Update the secret if the token was refreshed
-      - name: Update access token secret
-        if: env.NEW_ACCESS_TOKEN != ''
-        run: gh secret set INSTAGRAM_ACCESS_TOKEN --body "${{ env.NEW_ACCESS_TOKEN }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # 6. Commit any changes (new images, updated posts.json)
       - name: Commit and push
         run: |
